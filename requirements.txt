@@ -5,3 +5,4 @@ ultralytics==8.3.59
 slack_sdk==3.34.0
 shapely==2.0.6
 typing==3.7.4.3
+torch==2.5.1
