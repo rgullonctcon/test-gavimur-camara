@@ -329,6 +329,9 @@ def inference_dual_models(model1, model2):
         # Start video capture
         videocapture = cv2.VideoCapture(rtsp_url)
 
+        timeout_value = 100000000  # Timeout de 5 segundos (5000000 microsegundos)
+        cap.set(cv2.CAP_PROP_FFMPEG_TIMEOUT, timeout_value)
+
         if not videocapture.isOpened():
             st.error("Could not open video source.")
         else:
