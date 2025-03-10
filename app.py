@@ -327,8 +327,9 @@ def inference_dual_models(model1, model2):
 
         #videocapture = cv2.VideoCapture(0)
         # Start video capture
-        videocapture = cv2.VideoCapture(rtsp_url)
+        cap = cv2.VideoCapture(rtsp_url)
 
+        cap.set(cv2.CAP_PROP_FPS, 5000)
         if not videocapture.isOpened():
             st.error("Could not open video source.")
         else:
