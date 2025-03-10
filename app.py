@@ -32,7 +32,6 @@ foscam_ip = st.secrets["foscam"]["ip"]
 foscam_port = st.secrets["foscam"]["port"]
 rtsp_url = f"rtsp://{foscam_username}:{foscam_password}@{foscam_ip}:{foscam_port}/videoMain"
 
-torch.classes.__path__ = []
 
 
 def draw_boxes(frame, results, color=(255, 0, 0), label_prefix="", class_filter=None, 
@@ -329,7 +328,6 @@ def inference_dual_models(model1, model2):
         # Start video capture
         cap = cv2.VideoCapture(rtsp_url)
 
-        cap.set(cv2.CAP_PROP_FPS, 500000)
         if not cap.isOpened():
             st.error("Could not open video source.")
         else:
