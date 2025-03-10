@@ -32,6 +32,8 @@ foscam_ip = st.secrets["foscam"]["ip"]
 foscam_port = st.secrets["foscam"]["port"]
 rtsp_url = f"rtsp://{foscam_username}:{foscam_password}@{foscam_ip}:{foscam_port}/videoMain"
 
+torch.classes.__path__ = []
+
 
 def draw_boxes(frame, results, color=(255, 0, 0), label_prefix="", class_filter=None, 
                return_detected_objects=False, dibujar=True):
