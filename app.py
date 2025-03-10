@@ -330,13 +330,13 @@ def inference_dual_models(model1, model2):
         cap = cv2.VideoCapture(rtsp_url)
 
         cap.set(cv2.CAP_PROP_FPS, 5000)
-        if not videocapture.isOpened():
+        if not cap.isOpened():
             st.error("Could not open video source.")
         else:
             stop_button = st.button("Finalizar")
 
-            while videocapture.isOpened():
-                success, frame = videocapture.read()
+            while cap.isOpened():
+                success, frame = cap.read()
                 if not success:
                     st.warning("Failed to read frame.")
                     break
@@ -385,12 +385,12 @@ def inference_dual_models(model1, model2):
 
                 
                 if stop_button:
-                    videocapture.release()
+                    cap.release()
                     torch.cuda.empty_cache()
                     st.stop()
 
 
-            videocapture.release()
+            cap.release()
             torch.cuda.empty_cache()
             cv2.destroyAllWindows()
 
