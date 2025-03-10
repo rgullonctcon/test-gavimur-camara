@@ -72,9 +72,9 @@ def draw_boxes(frame, results, color=(255, 0, 0), label_prefix="", class_filter=
                 label = "person" if cls == 0 else f"Class {cls}"
             elif label_prefix == "Yolo2":
                 # Para Yolo2, la clase 0 es "helmet" y la clase 1 es "vest"
-                if cls == 0:
+                if cls == 1:
                     label = "helmet"
-                elif cls == 7:
+                elif cls == 4:
                     label = "vest"
                 else:
                     label = f"Class {cls}"
@@ -350,12 +350,12 @@ def inference_dual_models(model1, model2):
 
                 # Model 2 predictions
                 if enable_trk == "Yes":
-                    results2 = model2.track(frame, conf=0.45, iou=0.45, classes=[0,7], persist=True)
+                    results2 = model2.track(frame, conf=0.45, iou=0.45, classes=[1,4], persist=True)
                 else:
-                    results2 = model2(frame, conf=0.45, iou=0.45, classes=[0,7])
+                    results2 = model2(frame, conf=0.45, iou=0.45, classes=[1,4])
 
                 frame,detected_objects1 = draw_boxes(frame, results1, color=(255, 0, 0), label_prefix="Yolo1", class_filter=0, return_detected_objects=True, dibujar= False)  # Solo clase "person" en model_yolo1
-                frame,detected_objects2 = draw_boxes(frame, results2, color=(0, 255, 0), label_prefix="Yolo2", class_filter= [0,7],  return_detected_objects=True, dibujar= False ) # Clases específicas en model_yolo2
+                frame,detected_objects2 = draw_boxes(frame, results2, color=(0, 255, 0), label_prefix="Yolo2", class_filter= [1,4],  return_detected_objects=True, dibujar= False ) # Clases específicas en model_yolo2
                 
                 # Annotate frames separately
                 annotated_frame1 = results1[0].plot() if results1 else frame
