@@ -267,6 +267,11 @@ def inference_dual_models(model1, model2):
     """Real-time object detection with two YOLO models in Streamlit."""
     check_requirements("streamlit>=1.29.0")
     
+     # Cargar los modelos correctamente
+    with st.spinner("Cargando modelos..."):
+        model1 = YOLO(model1_path)  # Asegura que model1 es un objeto YOLO
+        model2 = YOLO(model2_path)  # Asegura que model2 es un objeto YOLO
+
    # Estilo personalizado para ocultar el menú principal y mejorar el diseño
     menu_style_cfg = """<style>
     MainMenu {visibility: hidden;}
@@ -313,11 +318,6 @@ def inference_dual_models(model1, model2):
         
         # Botón para procesar
         if st.button("Procesar Video"):
-            with st.spinner("Cargando modelos..."):
-                model1 = YOLO(f"{model1.lower()}.pt")
-                model2 = YOLO(f"{model2.lower()}.pt")
-            
-            st.success("Modelos cargados exitosamente!")
             
             col1, col2 = st.columns(2)
             frame_placeholder1 = col1.empty()
@@ -381,4 +381,4 @@ def inference_dual_models(model1, model2):
         torch.cuda.empty_cache()
         cv2.destroyAllWindows()
 
-inference_dual_models(model1="model_YOLO_1", model2="model_YOLO_2") 
+inference_dual_models(model1_path="model_YOLO_1.pt", model2_path="model_YOLO_2.pt") 
