@@ -263,7 +263,7 @@ def send_slack_message(channel, message, token):
     except SlackApiError as e:
         print("Error al enviar mensaje:", e.response['error'])
 
-def inference_dual_models(model1, model2):
+def inference_dual_models(model1_path, model2_path):
     """Real-time object detection with two YOLO models in Streamlit."""
     check_requirements("streamlit>=1.29.0")
     
