@@ -329,20 +329,6 @@ def inference_dual_models(model1, model2):
                     st.warning("Fin del video o error al leer el cuadro.")
                     break
 
-    # Botón para iniciar
-        start_button = st.button("Empezar")
-
-    # Load YOLO models
-    if start_button:
-        with st.spinner("Descargando modelos..."):
-            model1 = YOLO(f"{model1.lower()}.pt")
-            model2 = YOLO(f"{model2.lower()}.pt")
-
-            class_names1 = list(model1.names.values())
-            class_names2 = list(model2.names.values())
-
-        st.success("Modelos cargados exitosamente!")
-
         # Display two separate columns
         col1, col2 = st.columns(2)
         frame_placeholder1 = col1.empty()  # Placeholder for Model 1
@@ -391,8 +377,8 @@ def inference_dual_models(model1, model2):
         send_slack_message(channel, message, token)
 
 
-    cap.release()
-    torch.cuda.empty_cache()
-    cv2.destroyAllWindows()
+        cap.release()
+        torch.cuda.empty_cache()
+        cv2.destroyAllWindows()
 
 inference_dual_models(model1="model_YOLO_1", model2="model_YOLO_2") 
