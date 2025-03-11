@@ -3,6 +3,7 @@ import time
 
 import cv2
 import torch
+import numpy as np
 
 from ultralytics.utils.checks import check_requirements
 from ultralytics.utils.downloads import GITHUB_ASSETS_STEMS
@@ -178,6 +179,15 @@ def usuario_zona_peligrosa(x, y, sigma, detected_objects, frame):
     - str: Mensaje sobre si la persona está en la zona peligrosa o no.
     - int: 1 si está en la zona peligrosa, 0 si no lo está.
     """
+
+    # Convertir la imagen a una matriz numpy en RGB o escala de grises
+    image_array = np.array(frame)
+
+    # Obtener la altura de la imagen
+    height = image_array.shape[0]  # Esto te da la altura (número de filas)
+
+    y = height - y
+
     # Definir las coordenadas de las esquinas de la zona peligrosa (un cuadrado con centro en (x, y) y lado 2*sigma)
     x_1 = int(x - sigma*0.5)
     y_1 = int(y + sigma*0.5)
@@ -265,121 +275,96 @@ def send_slack_message(channel, message, token):
 
 def inference_dual_models(model1_path, model2_path):
     """Real-time object detection with two YOLO models in Streamlit."""
-    check_requirements("streamlit>=1.29.0")
+    st.set_page_config(page_title="Dual YOLO Streamlit App", layout="wide")
 
-# Configuración de la página de Streamlit
-    st.set_page_config(page_title="Dual YOLO Streamlit App", layout="wide", initial_sidebar_state="auto")
-
-     # Cargar los modelos correctamente
+    # Cargar modelos
     with st.spinner("Cargando modelos..."):
-        model1 = YOLO(model1_path)  # Asegura que model1 es un objeto YOLO
-        model2 = YOLO(model2_path)  # Asegura que model2 es un objeto YOLO
+        model1 = YOLO(model1_path)
+        model2 = YOLO(model2_path)
 
-   # Estilo personalizado para ocultar el menú principal y mejorar el diseño
-    menu_style_cfg = """<style>
-    MainMenu {visibility: hidden;}
-    </style>"""
+    st.markdown("<h1 style='text-align: center; color: #FF64DA;'>Aplicación para seguridad en construcción</h1>", 
+                unsafe_allow_html=True)
 
-# Estilo para el título principal
-    main_title_cfg = """<div><h1 style="color:#FF64DA; text-align:center; font-size:40px; 
-                             font-family: 'Archivo', sans-serif; margin-top:-50px;margin-bottom:20px;">
-                    Aplicación para seguridad en construcción
-                    </h1></div>"""
-
-
-# Aplicar los estilos personalizados
-    st.markdown(menu_style_cfg, unsafe_allow_html=True)
-    st.markdown(main_title_cfg, unsafe_allow_html=True)
-
-# Usamos columnas para ubicar las cajas de los tres valores en la parte superior derecha
-    col1, col2 = st.columns([1, 1])  # Ajusta la proporción según sea necesario
-
-# En la tercera columna, colocamos las cajas de entrada
+    # UI para parámetros de zona peligrosa
+    col1, col2 = st.columns([1, 1])
     with col2:
-        st.write("")  # Espacio vacío en la primera columna
-        st.write("")  # Espacio vacío en la segunda columna
-        st.write("")  # Espacio vacío en la parte superior para no pegar las cajas al borde
-
         st.write("Delimitación de zona peligrosa")
-    # Caja para el primer valor
         x = st.number_input("X", min_value=0, value=0, key="val1")
-    # Caja para el segundo valor
         y = st.number_input("Y", min_value=0, value=0, key="val2")
-    # Caja para el tercer valor
         sigma = st.number_input("Longitud del lado del cuadrado", min_value=0, value=0, key="val3")
 
-# Cargar el video
+    # Cargar video
     uploaded_video = st.file_uploader("Sube un video", type=["mp4", "avi", "mov", "mkv"])
     
     if uploaded_video:
         with open("temp_video.mp4", "wb") as f:
             f.write(uploaded_video.getbuffer())
-        
+
         cap = cv2.VideoCapture("temp_video.mp4")
-        
-        # Botón para procesar
+
+        # Crear placeholders para los videos
+        col1, col2 = st.columns(2)
+        frame_placeholder1 = col1.empty()
+        frame_placeholder2 = col2.empty()
+
+
+
+        # Variable de control en session_state
+        if "stop_processing" not in st.session_state:
+            st.session_state.stop_processing = False
+
+        # Botón para procesar el video
         if st.button("Procesar Video"):
-            
-            col1, col2 = st.columns(2)
-            frame_placeholder1 = col1.empty()
-            frame_placeholder2 = col2.empty()
+            st.session_state.stop_processing = False  # Reset al iniciar
+
+        # Botón para detener el video
+        if st.button("Parar Video", key="stop_button"):
+            st.session_state.stop_processing = True  # Cambia la variable de control
+
+        # Cargar el video solo si el usuario no lo ha detenido
+        if uploaded_video and not st.session_state.stop_processing:
+            cap = cv2.VideoCapture("temp_video.mp4")
             
             while cap.isOpened():
                 success, frame = cap.read()
-                if not success:
-                    st.warning("Fin del video o error al leer el cuadro.")
+                if not success or st.session_state.stop_processing:
+                    st.warning("Fin del video o detenido por el usuario.")
                     break
 
-                # Display two separate columns
-                col1, col2 = st.columns(2)
-                frame_placeholder1 = col1.empty()  # Placeholder for Model 1
-                frame_placeholder2 = col2.empty()  # Placeholder for Model 2
-
-                prev_time = time.time()
-
                 # Model 1 predictions
-                enable_trk ="Yes"
-                if enable_trk == "Yes":
-                    results1 = model1.track(frame, conf=0.45, iou=0.45, classes=0, persist=True)
-                else:
-                    results1 = model1(frame, conf=0.45, iou=0.45, classes=0)
+                results1 = model1.track(frame, conf=0.45, iou=0.45, classes=0, persist=True)
 
                 # Model 2 predictions
-                if enable_trk == "Yes":
-                    results2 = model2.track(frame, conf=0.45, iou=0.45, classes=[1,4], persist=True)
-                else:
-                    results2 = model2(frame, conf=0.45, iou=0.45, classes=[1,4])
+                results2 = model2.track(frame, conf=0.45, iou=0.45, classes=[1, 4], persist=True)
 
-                frame,detected_objects1 = draw_boxes(frame, results1, color=(255, 0, 0), label_prefix="Yolo1", class_filter=0, return_detected_objects=True, dibujar= False)  # Solo clase "person" en model_yolo1
-                frame,detected_objects2 = draw_boxes(frame, results2, color=(0, 255, 0), label_prefix="Yolo2", class_filter= [1,4],  return_detected_objects=True, dibujar= False ) # Clases específicas en model_yolo2
-                
-                # Annotate frames separately
+                # Dibujar cajas
+                frame, detected_objects1 = draw_boxes(frame, results1, color=(255, 0, 0), label_prefix="Yolo1", class_filter=0, return_detected_objects=True, dibujar=False)
+                frame, detected_objects2 = draw_boxes(frame, results2, color=(0, 255, 0), label_prefix="Yolo2", class_filter=[1, 4], return_detected_objects=True, dibujar=False)
+
+                # Anotaciones en los frames
                 annotated_frame1 = results1[0].plot() if results1 else frame
                 annotated_frame2 = results2[0].plot() if results2 else frame
 
                 detected_objects = detected_objects1 + detected_objects2
-                #Comprueba si el obrero tiene el EPI puesto
 
+                # Comprobaciones
                 mensaje, epi = verificar_proteccion(detected_objects)
+                mensaje, peligro = usuario_zona_peligrosa(x, y, sigma, detected_objects, annotated_frame1)
 
-                #Comprueba si el obrero está en zona peligrosa
-
-                mensaje, peligro = usuario_zona_peligrosa(x, 480 -y, sigma, detected_objects, annotated_frame1)
-
-                # Display annotated frames in separate columns
+                # Mostrar frames en columnas separadas
                 frame_placeholder1.image(annotated_frame1, channels="BGR", caption="Vigilancia de peligro")
                 frame_placeholder2.image(annotated_frame2, channels="BGR", caption="Detección de EPI")
 
-                #Manda mensaje en Slack
-
+                # Enviar mensaje a Slack
                 message = verificar_seguridad(epi, peligro)
                 print(message)
-
                 send_slack_message(channel, message, token)
 
+                time.sleep(0.03)
 
-                cap.release()
-                torch.cuda.empty_cache()
-                cv2.destroyAllWindows()
+        cap.release()
+        torch.cuda.empty_cache()
+        cv2.destroyAllWindows()
+
 
 inference_dual_models(model1_path="model_YOLO_1.pt", model2_path="model_YOLO_2.pt") 
