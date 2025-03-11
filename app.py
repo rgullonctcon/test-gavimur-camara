@@ -302,6 +302,32 @@ def inference_dual_models(model1, model2):
     # Caja para el tercer valor
         sigma = st.number_input("Longitud del lado del cuadrado", min_value=0, value=0, key="val3")
 
+# Cargar el video
+    uploaded_video = st.file_uploader("Sube un video", type=["mp4", "avi", "mov", "mkv"])
+    
+    if uploaded_video:
+        with open("temp_video.mp4", "wb") as f:
+            f.write(uploaded_video.getbuffer())
+        
+        cap = cv2.VideoCapture("temp_video.mp4")
+        
+        # Botón para procesar
+        if st.button("Procesar Video"):
+            with st.spinner("Cargando modelos..."):
+                model1 = YOLO(f"{model1.lower()}.pt")
+                model2 = YOLO(f"{model2.lower()}.pt")
+            
+            st.success("Modelos cargados exitosamente!")
+            
+            col1, col2 = st.columns(2)
+            frame_placeholder1 = col1.empty()
+            frame_placeholder2 = col2.empty()
+            
+            while cap.isOpened():
+                success, frame = cap.read()
+                if not success:
+                    st.warning("Fin del video o error al leer el cuadro.")
+                    break
 
     # Botón para iniciar
         start_button = st.button("Empezar")
@@ -322,74 +348,57 @@ def inference_dual_models(model1, model2):
         frame_placeholder1 = col1.empty()  # Placeholder for Model 1
         frame_placeholder2 = col2.empty()  # Placeholder for Model 2
 
-        # Start video capture
+        prev_time = time.time()
 
-        #videocapture = cv2.VideoCapture(0)
-        # Start video capture
-        cap = cv2.VideoCapture(rtsp_url)
-
-        if not cap.isOpened():
-            st.error("Could not open video source.")
+        # Model 1 predictions
+        enable_trk ="Yes"
+        if enable_trk == "Yes":
+            results1 = model1.track(frame, conf=0.45, iou=0.45, classes=0, persist=True)
         else:
-            stop_button = st.button("Finalizar")
+            results1 = model1(frame, conf=0.45, iou=0.45, classes=0)
 
-            while cap.isOpened():
-                success, frame = cap.read()
-                if not success:
-                    st.warning("Failed to read frame.")
-                    break
+        # Model 2 predictions
+        if enable_trk == "Yes":
+            results2 = model2.track(frame, conf=0.45, iou=0.45, classes=[1,4], persist=True)
+        else:
+            results2 = model2(frame, conf=0.45, iou=0.45, classes=[1,4])
 
-                prev_time = time.time()
+        frame,detected_objects1 = draw_boxes(frame, results1, color=(255, 0, 0), label_prefix="Yolo1", class_filter=0, return_detected_objects=True, dibujar= False)  # Solo clase "person" en model_yolo1
+        frame,detected_objects2 = draw_boxes(frame, results2, color=(0, 255, 0), label_prefix="Yolo2", class_filter= [1,4],  return_detected_objects=True, dibujar= False ) # Clases específicas en model_yolo2
+        
+        # Annotate frames separately
+        annotated_frame1 = results1[0].plot() if results1 else frame
+        annotated_frame2 = results2[0].plot() if results2 else frame
 
-                # Model 1 predictions
-                enable_trk ="Yes"
-                if enable_trk == "Yes":
-                    results1 = model1.track(frame, conf=0.45, iou=0.45, classes=0, persist=True)
-                else:
-                    results1 = model1(frame, conf=0.45, iou=0.45, classes=0)
+        detected_objects = detected_objects1 + detected_objects2
+        #Comprueba si el obrero tiene el EPI puesto
 
-                # Model 2 predictions
-                if enable_trk == "Yes":
-                    results2 = model2.track(frame, conf=0.45, iou=0.45, classes=[1,4], persist=True)
-                else:
-                    results2 = model2(frame, conf=0.45, iou=0.45, classes=[1,4])
+        mensaje, epi = verificar_proteccion(detected_objects)
 
-                frame,detected_objects1 = draw_boxes(frame, results1, color=(255, 0, 0), label_prefix="Yolo1", class_filter=0, return_detected_objects=True, dibujar= False)  # Solo clase "person" en model_yolo1
-                frame,detected_objects2 = draw_boxes(frame, results2, color=(0, 255, 0), label_prefix="Yolo2", class_filter= [1,4],  return_detected_objects=True, dibujar= False ) # Clases específicas en model_yolo2
-                
-                # Annotate frames separately
-                annotated_frame1 = results1[0].plot() if results1 else frame
-                annotated_frame2 = results2[0].plot() if results2 else frame
+        #Comprueba si el obrero está en zona peligrosa
 
-                detected_objects = detected_objects1 + detected_objects2
-                #Comprueba si el obrero tiene el EPI puesto
+        mensaje, peligro = usuario_zona_peligrosa(x, 480 -y, sigma, detected_objects, annotated_frame1)
 
-                mensaje, epi = verificar_proteccion(detected_objects)
+        # Display annotated frames in separate columns
+        frame_placeholder1.image(annotated_frame1, channels="BGR", caption="Vigilancia de peligro")
+        frame_placeholder2.image(annotated_frame2, channels="BGR", caption="Detección de EPI")
 
-                #Comprueba si el obrero está en zona peligrosa
+        #Manda mensaje en Slack
 
-                mensaje, peligro = usuario_zona_peligrosa(x, 480 -y, sigma, detected_objects, annotated_frame1)
+        message = verificar_seguridad(epi, peligro)
+        print(message)
 
-                # Display annotated frames in separate columns
-                frame_placeholder1.image(annotated_frame1, channels="BGR", caption="Vigilancia de peligro")
-                frame_placeholder2.image(annotated_frame2, channels="BGR", caption="Detección de EPI")
+        send_slack_message(channel, message, token)
 
-                #Manda mensaje en Slack
-
-                message = verificar_seguridad(epi, peligro)
-                print(message)
-
-                send_slack_message(channel, message, token)
-
-                
-                if stop_button:
-                    cap.release()
-                    torch.cuda.empty_cache()
-                    st.stop()
-
-
-            cap.release()
+        
+        if stop_button:
+            videocapture.release()
             torch.cuda.empty_cache()
-            cv2.destroyAllWindows()
+            st.stop()
 
-inference_dual_models(model1="model_YOLO_1", model2="model_YOLO_2")
+
+    videocapture.release()
+    torch.cuda.empty_cache()
+    cv2.destroyAllWindows()
+
+inference_dual_models(model1="model_YOLO_1", model2="model_YOLO_2") 
