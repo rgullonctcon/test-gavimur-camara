@@ -390,14 +390,8 @@ def inference_dual_models(model1, model2):
 
         send_slack_message(channel, message, token)
 
-        
-        if stop_button:
-            videocapture.release()
-            torch.cuda.empty_cache()
-            st.stop()
 
-
-    videocapture.release()
+    cap.release()
     torch.cuda.empty_cache()
     cv2.destroyAllWindows()
 
