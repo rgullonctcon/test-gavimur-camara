@@ -266,7 +266,10 @@ def send_slack_message(channel, message, token):
 def inference_dual_models(model1_path, model2_path):
     """Real-time object detection with two YOLO models in Streamlit."""
     check_requirements("streamlit>=1.29.0")
-    
+
+# Configuración de la página de Streamlit
+    st.set_page_config(page_title="Dual YOLO Streamlit App", layout="wide", initial_sidebar_state="auto")
+
      # Cargar los modelos correctamente
     with st.spinner("Cargando modelos..."):
         model1 = YOLO(model1_path)  # Asegura que model1 es un objeto YOLO
@@ -283,8 +286,6 @@ def inference_dual_models(model1_path, model2_path):
                     Aplicación para seguridad en construcción
                     </h1></div>"""
 
-# Configuración de la página de Streamlit
-    st.set_page_config(page_title="Dual YOLO Streamlit App", layout="wide", initial_sidebar_state="auto")
 
 # Aplicar los estilos personalizados
     st.markdown(menu_style_cfg, unsafe_allow_html=True)
