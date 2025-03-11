@@ -330,56 +330,56 @@ def inference_dual_models(model1_path, model2_path):
                     st.warning("Fin del video o error al leer el cuadro.")
                     break
 
-        # Display two separate columns
-        col1, col2 = st.columns(2)
-        frame_placeholder1 = col1.empty()  # Placeholder for Model 1
-        frame_placeholder2 = col2.empty()  # Placeholder for Model 2
+                # Display two separate columns
+                col1, col2 = st.columns(2)
+                frame_placeholder1 = col1.empty()  # Placeholder for Model 1
+                frame_placeholder2 = col2.empty()  # Placeholder for Model 2
 
-        prev_time = time.time()
+                prev_time = time.time()
 
-        # Model 1 predictions
-        enable_trk ="Yes"
-        if enable_trk == "Yes":
-            results1 = model1.track(frame, conf=0.45, iou=0.45, classes=0, persist=True)
-        else:
-            results1 = model1(frame, conf=0.45, iou=0.45, classes=0)
+                # Model 1 predictions
+                enable_trk ="Yes"
+                if enable_trk == "Yes":
+                    results1 = model1.track(frame, conf=0.45, iou=0.45, classes=0, persist=True)
+                else:
+                    results1 = model1(frame, conf=0.45, iou=0.45, classes=0)
 
-        # Model 2 predictions
-        if enable_trk == "Yes":
-            results2 = model2.track(frame, conf=0.45, iou=0.45, classes=[1,4], persist=True)
-        else:
-            results2 = model2(frame, conf=0.45, iou=0.45, classes=[1,4])
+                # Model 2 predictions
+                if enable_trk == "Yes":
+                    results2 = model2.track(frame, conf=0.45, iou=0.45, classes=[1,4], persist=True)
+                else:
+                    results2 = model2(frame, conf=0.45, iou=0.45, classes=[1,4])
 
-        frame,detected_objects1 = draw_boxes(frame, results1, color=(255, 0, 0), label_prefix="Yolo1", class_filter=0, return_detected_objects=True, dibujar= False)  # Solo clase "person" en model_yolo1
-        frame,detected_objects2 = draw_boxes(frame, results2, color=(0, 255, 0), label_prefix="Yolo2", class_filter= [1,4],  return_detected_objects=True, dibujar= False ) # Clases específicas en model_yolo2
-        
-        # Annotate frames separately
-        annotated_frame1 = results1[0].plot() if results1 else frame
-        annotated_frame2 = results2[0].plot() if results2 else frame
+                frame,detected_objects1 = draw_boxes(frame, results1, color=(255, 0, 0), label_prefix="Yolo1", class_filter=0, return_detected_objects=True, dibujar= False)  # Solo clase "person" en model_yolo1
+                frame,detected_objects2 = draw_boxes(frame, results2, color=(0, 255, 0), label_prefix="Yolo2", class_filter= [1,4],  return_detected_objects=True, dibujar= False ) # Clases específicas en model_yolo2
+                
+                # Annotate frames separately
+                annotated_frame1 = results1[0].plot() if results1 else frame
+                annotated_frame2 = results2[0].plot() if results2 else frame
 
-        detected_objects = detected_objects1 + detected_objects2
-        #Comprueba si el obrero tiene el EPI puesto
+                detected_objects = detected_objects1 + detected_objects2
+                #Comprueba si el obrero tiene el EPI puesto
 
-        mensaje, epi = verificar_proteccion(detected_objects)
+                mensaje, epi = verificar_proteccion(detected_objects)
 
-        #Comprueba si el obrero está en zona peligrosa
+                #Comprueba si el obrero está en zona peligrosa
 
-        mensaje, peligro = usuario_zona_peligrosa(x, 480 -y, sigma, detected_objects, annotated_frame1)
+                mensaje, peligro = usuario_zona_peligrosa(x, 480 -y, sigma, detected_objects, annotated_frame1)
 
-        # Display annotated frames in separate columns
-        frame_placeholder1.image(annotated_frame1, channels="BGR", caption="Vigilancia de peligro")
-        frame_placeholder2.image(annotated_frame2, channels="BGR", caption="Detección de EPI")
+                # Display annotated frames in separate columns
+                frame_placeholder1.image(annotated_frame1, channels="BGR", caption="Vigilancia de peligro")
+                frame_placeholder2.image(annotated_frame2, channels="BGR", caption="Detección de EPI")
 
-        #Manda mensaje en Slack
+                #Manda mensaje en Slack
 
-        message = verificar_seguridad(epi, peligro)
-        print(message)
+                message = verificar_seguridad(epi, peligro)
+                print(message)
 
-        send_slack_message(channel, message, token)
+                send_slack_message(channel, message, token)
 
 
-        cap.release()
-        torch.cuda.empty_cache()
-        cv2.destroyAllWindows()
+                cap.release()
+                torch.cuda.empty_cache()
+                cv2.destroyAllWindows()
 
 inference_dual_models(model1_path="model_YOLO_1.pt", model2_path="model_YOLO_2.pt") 
