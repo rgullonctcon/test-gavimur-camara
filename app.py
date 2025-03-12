@@ -293,6 +293,9 @@ def inference_dual_models(model1_path, model2_path):
         if st.button("Parar Video", key="stop_button"):
             st.session_state.stop_processing = True  # Cambia la variable de control
 
+        # Inicializar el tiempo de la última inferencia
+        last_inference_time = time.time()    
+
         # Cargar el video solo si el usuario no lo ha detenido
         if uploaded_video and not st.session_state.stop_processing:
             cap = cv2.VideoCapture("temp_video.mp4")
@@ -302,35 +305,41 @@ def inference_dual_models(model1_path, model2_path):
                 if not success or st.session_state.stop_processing:
                     st.warning("Fin del video o detenido por el usuario.")
                     break
+                
+                 # Obtener el tiempo actual
+                current_time = time.time()
 
-                # Model 1 predictions
-                results1 = model1.track(frame, conf=0.45, iou=0.45, classes=0, persist=True)
+                # Inferir solo si ha pasado un segundo desde la última inferencia
+                if current_time - last_inference_time >= 1:  # Intervalo de 1 segundo
+                    
+                    # Model 1 predictions
+                    results1 = model1.track(frame, conf=0.45, iou=0.45, classes=0, persist=True)
 
-                # Model 2 predictions
-                results2 = model2.track(frame, conf=0.35, iou=0.35, classes=[1, 4], persist=True)
+                    # Model 2 predictions
+                    results2 = model2.track(frame, conf=0.35, iou=0.35, classes=[1, 4], persist=True)
 
-                # Dibujar cajas
-                frame, detected_objects1 = draw_boxes(frame, results1, color=(255, 0, 0), label_prefix="Yolo1", class_filter=0, return_detected_objects=True, dibujar=False)
-                frame, detected_objects2 = draw_boxes(frame, results2, color=(0, 255, 0), label_prefix="Yolo2", class_filter=[1, 4], return_detected_objects=True, dibujar=False)
+                    # Dibujar cajas
+                    frame, detected_objects1 = draw_boxes(frame, results1, color=(255, 0, 0), label_prefix="Yolo1", class_filter=0, return_detected_objects=True, dibujar=False)
+                    frame, detected_objects2 = draw_boxes(frame, results2, color=(0, 255, 0), label_prefix="Yolo2", class_filter=[1, 4], return_detected_objects=True, dibujar=False)
 
-                # Anotaciones en los frames
-                annotated_frame1 = results1[0].plot() if results1 else frame
-                annotated_frame2 = results2[0].plot() if results2 else frame
+                    # Anotaciones en los frames
+                    annotated_frame1 = results1[0].plot() if results1 else frame
+                    annotated_frame2 = results2[0].plot() if results2 else frame
 
-                detected_objects = detected_objects1 + detected_objects2
+                    detected_objects = detected_objects1 + detected_objects2
 
-                # Comprobaciones
-                mensaje, epi = verificar_proteccion(detected_objects)
-        
-                mensaje, peligro = usuario_zona_peligrosa(x, y, sigma, detected_objects, annotated_frame1)
+                    # Comprobaciones
+                    mensaje, epi = verificar_proteccion(detected_objects)
+            
+                    mensaje, peligro = usuario_zona_peligrosa(x, y, sigma, detected_objects, annotated_frame1)
 
-                # Mostrar frames en columnas separadas
-                frame_placeholder1.image(annotated_frame1, channels="BGR", caption="Vigilancia de peligro")
-                frame_placeholder2.image(annotated_frame2, channels="BGR", caption="Detección de EPI")
+                    # Mostrar frames en columnas separadas
+                    frame_placeholder1.image(annotated_frame1, channels="BGR", caption="Vigilancia de peligro")
+                    frame_placeholder2.image(annotated_frame2, channels="BGR", caption="Detección de EPI")
 
-                # Enviar mensaje a Slack
-                message = verificar_seguridad(epi, peligro)
-                send_slack_message(channel, message, token)
+                    # Enviar mensaje a Slack
+                    message = verificar_seguridad(epi, peligro)
+                    send_slack_message(channel, message, token)
 
         cap.release()
         torch.cuda.empty_cache()
