@@ -310,7 +310,7 @@ def inference_dual_models(model1_path, model2_path):
                 current_time = time.time()
 
                 # Inferir solo si ha pasado un segundo desde la última inferencia
-                if current_time - last_inference_time >= 2:  # Intervalo de 1 segundo
+                if current_time - last_inference_time >= 4:  # Intervalo de 1 segundo
                     
                     # Model 1 predictions
                     results1 = model1.track(frame, conf=0.45, iou=0.45, classes=0, persist=True)
