@@ -256,7 +256,7 @@ def inference_dual_models(model1_path, model2_path):
         model1 = YOLO(model1_path)
         model2 = YOLO(model2_path)
 
-    st.markdown("<h1 style='text-align: center; color: #FF64DA;'>Aplicación para seguridad en construcción</h1>", 
+    st.markdown("<h1 style='text-align: center; color: #000000;'>Aplicación para seguridad en construcción</h1>", 
                 unsafe_allow_html=True)
 
     # UI para parámetros de zona peligrosa
